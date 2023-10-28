@@ -37,11 +37,20 @@ class Scanner(private val source: String) {
             '>' -> addToken(if (match('=')) GREATER_EQUAL else GREATER)
 
             '/' -> {
-                if (match('/')) {
-                    while (peek() != '\n' && !isAtEnd()) advance()
-                } else {
-                    addToken(SLASH)
-                }
+                if (match('/')) while (peek() != '\n' && !isAtEnd()) advance()
+                else if (match('*')) {
+		    var nestLevel = 1
+		    while (nestLevel > 0 && !isAtEnd()) {
+			if (peek() == '\n') line++
+			else if (peek() == '/' && peekNext() == '*') nestLevel++
+			else if (peek() == '*' && peekNext() == '/') nestLevel--
+			advance()
+		    }
+
+		    if (isAtEnd()) Lox.error(line, "Unterminated comment.")
+		    else advance()
+
+		} else addToken(SLASH)
             }
 
             ' ', '\r', '\t' -> Unit
@@ -49,13 +58,9 @@ class Scanner(private val source: String) {
             '"' -> string()
 
             else -> {
-                if (isDigit(c)) {
-                    number()
-                } else if (isAlpha(c)){
-                    identifier()
-                } else {
-                    Lox.error(line, "Unexpected character.")
-                }
+                if (isDigit(c)) number()
+                else if (isAlpha(c)) identifier()
+                else Lox.error(line, "Unexpected character.")
             }
         }
     }
